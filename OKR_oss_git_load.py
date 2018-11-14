@@ -31,6 +31,10 @@ file_path = '/Users/ericgrant/Downloads/OKR_Dashboards/xfer/'
 omnisci_keyfile = file_path + 'omnisci_keys.json'
 
 tables_and_files = [
+#stargazers
+("oss_git_stargazers_core", file_path + "oss_git_stargazers_core.csv", {}, {}, "none"),
+("oss_git_stargazers_connector", file_path + "oss_git_stargazers_connector.csv", {}, {}, "none"),
+("oss_git_stargazers_charting", file_path + "oss_git_stargazers_charting.csv", {}, {}, "none"),
 #collaborators
 ("oss_git_collaborators_core", file_path + "oss_git_collaborators_core.csv", {}, {}, "none"),
 ("oss_git_collaborators_connector", file_path + "oss_git_collaborators_connector.csv", {}, {}, "none"),
@@ -50,11 +54,7 @@ tables_and_files = [
 #subscribers
 ("oss_git_subscribers_core", file_path + "oss_git_subscribers_core.csv", {}, {}, "none"),
 ("oss_git_subscribers_connector", file_path + "oss_git_subscribers_connector.csv", {}, {}, "none"),
-("oss_git_subscribers_charting", file_path + "oss_git_subscribers_charting.csv", {}, {}, "none"),
-#stargazers
-("oss_git_stargazers_core", file_path + "oss_git_stargazers_core.csv", {}, {}, "none"),
-("oss_git_stargazers_connector", file_path + "oss_git_stargazers_connector.csv", {}, {}, "none"),
-("oss_git_stargazers_charting", file_path + "oss_git_stargazers_charting.csv", {}, {}, "none")
+("oss_git_subscribers_charting", file_path + "oss_git_subscribers_charting.csv", {}, {}, "none")
 ]
 
 # FUNCTIONS
@@ -62,14 +62,17 @@ tables_and_files = [
 # Load CSV to dataframe and then copy to table using PyMapD
 def load_new_table_mapd(connection, table_name, csv_file, dtcol, renamings, tfrmt, mapd_host, mapd_user):
     df = pd.read_csv(csv_file)
-    df.reset_index(drop=True, inplace=True)
-    format_date_cols(df, dtcol, tfrmt) #force the column containing datetime values to be recast from strings to datetimes
-    rename_cols(df, renamings) #rename any columns that have naming conflicts (such as reserved words in immerse)
-    drop_table_mapd(connection, table_name) #drop the old table
-    connection.create_table(table_name, df, preserve_index=False) #create the new table
-    print ("loading table " + table_name)
-    display_cols(df)
-    connection.load_table(table_name, df) #load the new table into OmniSci
+    if df.empty:
+        print ("No Results to Upload")
+    else:
+        df.reset_index(drop=True, inplace=True)
+        format_date_cols(df, dtcol, tfrmt) #force the column containing datetime values to be recast from strings to datetimes
+        rename_cols(df, renamings) #rename any columns that have naming conflicts (such as reserved words in immerse)
+        drop_table_mapd(connection, table_name) #drop the old table
+        connection.create_table(table_name, df, preserve_index=False) #create the new table
+        print ("loading table " + table_name)
+        display_cols(df)
+        connection.load_table(table_name, df) #load the new table into OmniSci
 
 # MAIN
 def main():
