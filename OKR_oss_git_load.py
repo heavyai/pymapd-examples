@@ -10,6 +10,7 @@ import pandas as pd
 
 from parsing_utils import rename_cols
 from parsing_utils import format_date_cols
+from parsing_utils import display_cols
 
 from omnisci_utils import get_credentials
 from omnisci_utils import connect_to_mapd
@@ -67,6 +68,7 @@ def load_new_table_mapd(connection, table_name, csv_file, dtcol, renamings, tfrm
     drop_table_mapd(connection, table_name) #drop the old table
     connection.create_table(table_name, df, preserve_index=False) #create the new table
     print ("loading table " + table_name)
+    display_cols(df)
     connection.load_table(table_name, df) #load the new table into OmniSci
 
 # MAIN

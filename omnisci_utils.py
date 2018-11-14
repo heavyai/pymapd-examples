@@ -23,3 +23,4 @@ def drop_table_mapd(connection, table_name):
 
 def disconnect_mapd(connection):
     connection.close()
+
