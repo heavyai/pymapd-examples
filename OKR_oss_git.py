@@ -10,6 +10,8 @@ import requests
 import pandas as pd
 from pandas.io.json import json_normalize
 
+from parsing_utils import display_cols
+
 file_path = "/Users/ericgrant/Downloads/OKR_Dashboards/xfer/"
 pagination = "&simple=yes&page{0}&per_page=30"
 repo_path = "https://api.github.com/repos/omnisci/"
@@ -56,22 +58,26 @@ def main():
         repos=res.json()
     # create a dataframe
         df = pd.read_json(url_get)
-    #    print (df.columns)
-        if fc != "none":
-            print ("flattening " + fc)
-            df = json_normalize(df[fc])
-    # loop through subsequent github pages of results
-        while 'next' in res.links.keys():
-            res=requests.get(res.links['next']['url'])
-            repos.extend(res.json())
-            dfnext = pd.read_json(url_get)
+#        display_cols(df)
+        if df.empty:
+            print ("No Results")
+        else:
             if fc != "none":
                 print ("flattening " + fc)
                 df = json_normalize(df[fc])
-            df = df.append(dfnext, ignore_index=True)
-    # write to file
-        print ("writing " + fn)
-        df.to_csv(fn, index=False)
+        # loop through subsequent github pages of results
+            while 'next' in res.links.keys():
+                res=requests.get(res.links['next']['url'])
+                repos.extend(res.json())
+                dfnext = pd.read_json(url_get)
+                if fc != "none":
+                    print ("flattening " + fc)
+                    df = json_normalize(df[fc])
+                df = df.append(dfnext, ignore_index=True)
+        # write to file
+            print ("writing " + fn)
+#            display_cols(df)
+            df.to_csv(fn, index=False)
 
 if __name__ == '__main__':
   main()

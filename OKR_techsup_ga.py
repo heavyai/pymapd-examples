@@ -47,6 +47,7 @@ start_date = '2017-04-01'
 tables_and_files = [
 #blog post views
 ('techsup_ga_blogvisits', file_path + 'techsup_ga_blogvisits.csv', {'c1_timestamp'}, {}, {'time_on_page', 'unique_pageviews'}, {}, {'geo_city_code'}, "%Y%m%d",
+'CREATE TABLE IF NOT EXISTS techsup_ga_blogvisits (blog_title TEXT ENCODING DICT(8), blog_url TEXT ENCODING DICT(8), referral_path TEXT ENCODING DICT(8), c1_timestamp TIMESTAMP, unique_pageviews FLOAT, time_on_page FLOAT, source TEXT ENCODING DICT(8), city_name TEXT ENCODING DICT(8), city_canonical_name TEXT ENCODING DICT(8), country_code TEXT ENCODING DICT(8));',
   {
         'reportRequests': [
         {
@@ -223,19 +224,20 @@ def parse_data(df):
     df = parse_city(df)
     return df
 
-def connect_to_omnisci(tablename, df):
+def connect_to_omnisci(tablename, df, str_tablecreation):
 # connect to OmniSci
     dfcreds = pd.DataFrame()
     dfcreds = get_credentials(omnisci_keyfile)
     connection = connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
     drop_table_mapd(connection, tablename) #drop the old table
-    connection.create_table(tablename, df, preserve_index=False) #recreate the table
+    connection.execute(str_tablecreation)
+#    connection.create_table(tablename, df, preserve_index=False) #recreate the table
     connection.load_table(tablename, df) #load the new table into OmniSci
 # disconnect from OmniSci
     disconnect_mapd(connection)
 
 # Load CSV to dataframe and then copy to table using PyMapD
-def load_new_table_mapd(tablename, csvfile, dtcols, intcols, floatcols, strcols, renamings, tfrmt, mapd_host, mapd_user):
+def load_new_table_mapd(tablename, csvfile, dtcols, intcols, floatcols, strcols, renamings, tfrmt, creation, mapd_host, mapd_user):
     df = pd.read_csv(csvfile)
     df.reset_index(drop=True, inplace=True)
     format_date_cols(df, dtcols, tfrmt) #force the column containing datetime values to be recast from strings to timestamps
@@ -248,26 +250,22 @@ def load_new_table_mapd(tablename, csvfile, dtcols, intcols, floatcols, strcols,
     df = df.drop('city_target_type', 1)
     df = df.drop('city_status', 1)
     print ('loading dataframe into table ' + tablename)
-    print (df.head(10))
-    print (df.columns)
 #    rename_columns(df, renamings) #rename any columns that have naming conflicts (such as reserved words in immerse)
-    connect_to_omnisci(tablename, df)
+    connect_to_omnisci(tablename, df, creation)
 
 # MAIN
 def main():
 
 # loop through tables and reports
-    for os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, reportbody in tables_and_files:
+    for os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, creationstring, reportbody in tables_and_files:
 # connect to Google Analytics
         analytics = initialize_analyticsreporting()
         response = get_report(analytics, reportbody)
-# print retrieved data
-        # print_response(response)
 # format the data into the columnar tables OmniSci wants
         df = format_data(response)
 # save to a file
         output_to_csv(df, csv_file)
-        load_new_table_mapd(os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, mapdhost, mapduser)
+        load_new_table_mapd(os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, creationstring, mapdhost, mapduser)
 
 if __name__ == '__main__':
   main()
