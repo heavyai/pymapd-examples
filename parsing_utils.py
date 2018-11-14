@@ -30,3 +30,8 @@ def format_str_col(df, col_list):
 def format_flt_col(df, col_list):
     if col_list != {}:
         for col in col_list: df[col] = pd.to_numeric(df[col], downcast='float')
+        
+def display_cols(df):
+    for key, val in df.iterrows():
+        print (key)
+        print (val)
