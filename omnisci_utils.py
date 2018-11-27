@@ -17,6 +17,10 @@ def connect_to_mapd(str_user, str_password, str_host, str_dbname):
     connection = connect(user=str_user, password=str_password, host=str_host, dbname=str_dbname, port=443, protocol="https")
     return connection
 
+#def append_table_mapd(connection, table_name, dfnew):
+#    command = "INSERT INTO TABLE IF EXISTS %s" % (table_name)
+#    connection.execute (command)
+
 def drop_table_mapd(connection, table_name):
     command = "DROP TABLE IF EXISTS %s" % (table_name)
     connection.execute(command)
