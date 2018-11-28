@@ -10,10 +10,9 @@ import pandas as pd
 
 from parsing_utils import rename_cols
 from parsing_utils import format_date_cols
-from parsing_utils import display_cols
 
 from omnisci_utils import get_credentials
-from omnisci_utils import connect_to_mapd
+from omnisci_utils import wake_and_connect_to_mapd
 from omnisci_utils import drop_table_mapd
 from omnisci_utils import disconnect_mapd
 
@@ -59,11 +58,11 @@ tables_and_files = [
 
 # FUNCTIONS
 
-# Load CSV to dataframe and then copy to table using PyMapD
+# Load CSV to dataframe and then copy to table using pymapd
 def load_new_table_mapd(connection, table_name, csv_file, dtcol, renamings, tfrmt, mapd_host, mapd_user):
     df = pd.read_csv(csv_file)
     if df.empty:
-        print ("No Results to Upload")
+        print ("no results to upload")
     else:
         df.reset_index(drop=True, inplace=True)
         format_date_cols(df, dtcol, tfrmt) #force the column containing datetime values to be recast from strings to datetimes
@@ -71,19 +70,21 @@ def load_new_table_mapd(connection, table_name, csv_file, dtcol, renamings, tfrm
         drop_table_mapd(connection, table_name) #drop the old table
         connection.create_table(table_name, df, preserve_index=False) #create the new table
         print ("loading table " + table_name)
-        display_cols(df)
         connection.load_table(table_name, df) #load the new table into OmniSci
 
 # MAIN
 def main():
     # connect to MapD
     dfcreds = get_credentials(omnisci_keyfile)
-    connection = connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
+    connection = wake_and_connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
     # loop through tables
-    for table, file, dt, rn, tformat in tables_and_files:
-        load_new_table_mapd(connection, table, file, dt, rn, tformat, mapdhost, mapduser)
-    # disconnect MapD
-    disconnect_mapd(connection)
+    if connection != 'RETRY':
+        for table, file, dt, rn, tformat in tables_and_files:
+            load_new_table_mapd(connection, table, file, dt, rn, tformat, mapdhost, mapduser)
+        # disconnect MapD
+        disconnect_mapd(connection)
+    else:
+        print('could not wake OmniSci; exiting')
 
 if __name__ == '__main__':
   main()

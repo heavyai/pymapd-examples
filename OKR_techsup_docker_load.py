@@ -16,11 +16,8 @@ from parsing_utils import format_str_col
 from parsing_utils import format_bool_col
 
 from omnisci_utils import get_credentials
-from omnisci_utils import connect_to_mapd
+from omnisci_utils import wake_and_connect_to_mapd
 from omnisci_utils import disconnect_mapd
-
-#debugging only
-from parsing_utils import display_cols
 
 # VARIABLES
 
@@ -63,19 +60,22 @@ def parse_cols(df, renamings, int8s, int32s, dates, timeformat, strs, bools):
 def main():
     # connect to MapD
     dfcreds = get_credentials(omnisci_keyfile)
-    connection = connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
-     # loop through tables
-    for csv_file, renamed_cols, int8_cols, int32_cols, ts_cols, tf, str_cols, bool_cols in file_names:
-        #get the contents of the file and turn them into a dataframe
-        print ("reading from file " + csv_file)
-        dfnew = pd.read_csv(csv_file, index_col=False)
-        #rename and recast columns
-        parse_cols(dfnew, renamed_cols, int8_cols, int32_cols, ts_cols, tf, str_cols, bool_cols)
-        #append the contents of this file to the existing table
-        print ("appending file contents to table " + table_name)
-        connection.load_table(table_name, dfnew, preserve_index=False, create=False) #load the new table into OmniSci
-    # disconnect MapD
-    disconnect_mapd(connection)
+    connection = wake_and_connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
+    # loop through tables
+    if connection == 'RETRY':
+        print('could not wake OmniSci; exiting')
+    else:
+        for csv_file, renamed_cols, int8_cols, int32_cols, ts_cols, tf, str_cols, bool_cols in file_names:
+            #get the contents of the file and turn them into a dataframe
+            print ("reading from file " + csv_file)
+            dfnew = pd.read_csv(csv_file, index_col=False)
+            #rename and recast columns
+            parse_cols(dfnew, renamed_cols, int8_cols, int32_cols, ts_cols, tf, str_cols, bool_cols)
+            #append the contents of this file to the existing table
+            print ("appending file contents to table " + table_name)
+            connection.load_table(table_name, dfnew, preserve_index=False, create=False) #load the new table into OmniSci
+        # disconnect MapD
+        disconnect_mapd(connection)
 
 if __name__ == '__main__':
   main()

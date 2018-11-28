@@ -17,7 +17,7 @@ import pandas as pd
 from pandas.io.json import json_normalize
 
 from omnisci_utils import get_credentials
-from omnisci_utils import connect_to_mapd
+from omnisci_utils import wake_and_connect_to_mapd
 from omnisci_utils import drop_table_mapd
 from omnisci_utils import disconnect_mapd
 
@@ -36,6 +36,7 @@ mapdprotocol = 'https'
 mapddbname = 'mapd'
 mapduser = 'mapd'
 omnisci_keyfile = file_path + 'omnisci_keys.json'
+wait_interval = 25
 
 # parameters for Google API
 SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
@@ -73,37 +74,8 @@ tables_and_files = [
                     ]}
               ]}
     ]}
-)#,
-#("techsup_ga_blogvisits", file_path + "techsup_ga_blogvisits.csv", {'c1_timestamp'}, {}, {'time_on_page', 'unique_pageviews'}, {}, {'geo_city_code'}, "%Y%m%d",
-#  {
-#        'reportRequests': [
-#        {
-#          'viewId': VIEW_ID,
-#          'dateRanges': [
-#                  {'startDate': start_date, 'endDate': 'today'}
-#                ],
-#          'pageSize': 10000,
-#          'metrics': [
-#                  {'expression': 'ga:uniquePageviews'},
-#                  {'expression': 'ga:timeOnPage'}
-#                ],
-#          'dimensions': [
-#                  {'name': 'ga:pageTitle'},
-#                  {'name': 'ga:pagePath'},
-#                  {'name': 'ga:referralPath'},
-#                  {'name': 'ga:date'},
-#                  {'name': 'ga:cityID'}
-#                ],
-#          'dimensionFilterClauses': [
-#                  {'filters': [
-#                    {'dimensionName': 'ga:pageTitle', 'operator': 'PARTIAL', 'expressions': ['blog']}
-#                    ]}
-#              ]}
-#    ]}
-#)
+)
 ]
-
-#tabledefs = "blog_title TEXT ENCODING DICT, blog_url TEXT ENCODING DICT, referral_path TEXT ENCODING DICT, c1_timestamp TIMESTAMP, unique_pageviews FLOAT, time_on_page FLOAT, source TEXT ENCODING DICT, city_name TEXT ENCODING DICT, city_canonical_name TEXT ENCODING DICT, country_code TEXT ENCODING DICT"
 
 # GOOGLE ANALYTICS FUNCTIONS
 
@@ -219,53 +191,60 @@ def parse_city(df):
     df = pd.merge(df, dfcity, on=['geo_city_code'], how='left')
     return df
 
-def parse_data(df):
+def parse_geo_data(df):
     df = parse_source(df)
     df = parse_city(df)
     return df
 
-def connect_to_omnisci(tablename, df, str_tablecreation):
-# connect to OmniSci
-    dfcreds = pd.DataFrame()
-    dfcreds = get_credentials(omnisci_keyfile)
-    connection = connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
-    drop_table_mapd(connection, tablename) #drop the old table
-    connection.execute(str_tablecreation)
-#    connection.create_table(tablename, df, preserve_index=False) #recreate the table
-    connection.load_table(tablename, df) #load the new table into OmniSci
-# disconnect from OmniSci
-    disconnect_mapd(connection)
-
-# Load CSV to dataframe and then copy to table using PyMapD
-def load_new_table_mapd(tablename, csvfile, dtcols, intcols, floatcols, strcols, renamings, tfrmt, creation, mapd_host, mapd_user):
+# Load CSV to dataframe
+def parse_data(csvfile, dtcols, intcols, floatcols, strcols, renamings, tfrmt):
     df = pd.read_csv(csvfile)
     df.reset_index(drop=True, inplace=True)
     format_date_cols(df, dtcols, tfrmt) #force the column containing datetime values to be recast from strings to timestamps
     format_int_col(df, intcols)
     format_str_col(df, strcols)
     format_flt_col(df, floatcols)
-    df = parse_data(df)
+    df = parse_geo_data(df)
     df = df.drop('geo_city_code', 1)
     df = df.drop('city_parent_code', 1)
     df = df.drop('city_target_type', 1)
     df = df.drop('city_status', 1)
-    print ('loading dataframe into table ' + tablename)
-#    rename_columns(df, renamings) #rename any columns that have naming conflicts (such as reserved words in immerse)
-    connect_to_omnisci(tablename, df, creation)
+    return df
+
+def wake_up_omnisci():
+# get OmniSci credentials
+    dfcreds = pd.DataFrame()
+    dfcreds = get_credentials(omnisci_keyfile)
+# connect to OmniSci, allowing time for the instance to wake
+    connection = wake_and_connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
+    return connection
 
 # MAIN
 def main():
+    # connect to omnisci
+    connection = wake_up_omnisci()
+    if connection != "RETRY":
+    # loop through tables and reports
+        for os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, creationstring, reportbody in tables_and_files:
+            # connect to Google Analytics
+            analytics = initialize_analyticsreporting()
+            response = get_report(analytics, reportbody)
+            # format the data into the columnar tables OmniSci wants
+            df = format_data(response)
+            # save the dataframe to a file
+            output_to_csv(df, csv_file)
+            # create the new dataframe from the file contents
+            df = parse_data(csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format)
+            print ('loading dataframe into table ' + os_table)
+            drop_table_mapd(connection, os_table) #drop the old table
+            connection.execute(creationstring)
+            connection.load_table(os_table, df) #load the new table into OmniSci
+        # disconnect from OmniSci
+        disconnect_mapd(connection)
+    else:
+        print('could not wake OmniSci; exiting')
 
-# loop through tables and reports
-    for os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, creationstring, reportbody in tables_and_files:
-# connect to Google Analytics
-        analytics = initialize_analyticsreporting()
-        response = get_report(analytics, reportbody)
-# format the data into the columnar tables OmniSci wants
-        df = format_data(response)
-# save to a file
-        output_to_csv(df, csv_file)
-        load_new_table_mapd(os_table, csv_file, dt_cols, int_cols, float_cols, str_cols, rename_cols, time_format, creationstring, mapdhost, mapduser)
+
 
 if __name__ == '__main__':
   main()

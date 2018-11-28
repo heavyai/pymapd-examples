@@ -11,7 +11,7 @@ import pandas as pd
 from parsing_utils import format_date_cols
 
 from omnisci_utils import get_credentials
-from omnisci_utils import connect_to_mapd
+from omnisci_utils import wake_and_connect_to_mapd
 from omnisci_utils import drop_table_mapd
 from omnisci_utils import disconnect_mapd
 
@@ -57,12 +57,15 @@ def load_new_table_mapd(connection, table_name, csv_file, dtcol, tfrmt, mapd_hos
 def main():
     # connect to MapD
     dfcreds = get_credentials(omnisci_keyfile)
-    connection = connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
+    connection = wake_and_connect_to_mapd(dfcreds['write_key_name'], dfcreds['write_key_secret'], mapdhost, mapddbname)
     # loop through tables
-    for table, file, dt, tformat in tables_and_files:
-        load_new_table_mapd(connection, table, file, dt, tformat, mapdhost, mapduser)
-    # disconnect MapD
-    disconnect_mapd(connection)
+    if connection == 'RETRY':
+        print('could not wake OmniSci; exiting')
+    else:
+        for table, file, dt, tformat in tables_and_files:
+            load_new_table_mapd(connection, table, file, dt, tformat, mapdhost, mapduser)
+        # disconnect MapD
+        disconnect_mapd(connection)
 
 if __name__ == '__main__':
   main()
