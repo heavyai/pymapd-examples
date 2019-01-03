@@ -6,78 +6,129 @@ Created on Wed Oct  3 08:27:36 2018
 @author: ericgrant
 """
 
-import requests
 import pandas as pd
-from pandas.io.json import json_normalize
-
-from parsing_utils import display_cols
+from github import Github
+from omnisci_utils import get_credentials
 
 file_path = "/Users/ericgrant/Downloads/OKR_Dashboards/xfer/"
-pagination = "&simple=yes&page{0}&per_page=30"
-repo_path = "https://api.github.com/repos/omnisci/"
+parameters = {'page': 0, 'per_page': 30}
+gproject = "omnisci/"
 keyfile = file_path + "github_keys.json"
 
-endpoints = [
-#stargazers
-(repo_path + "mapd-core/stargazers", file_path + "oss_git_stargazers_core.csv", "none"),
-(repo_path + "mapd-connector/stargazers", file_path + "oss_git_stargazers_connector.csv", "none"),
-(repo_path + "mapd-charting/stargazers", file_path + "oss_git_stargazers_charting.csv", "none"),
-#traffic sources
-(repo_path + "mapd-core/traffic/popular/referrers", file_path + "oss_git_trafficreferrers_core.csv", "none"),
-(repo_path + "mapd-connector/traffic/popular/referrers", file_path + "oss_git_trafficreferrers_connector.csv", "none"),
-(repo_path + "mapd-charting/traffic/popular/referrers", file_path + "oss_git_trafficreferrers_charting.csv", "none"),
-#traffic views
-(repo_path + "mapd-core/traffic/views", file_path + "oss_git_trafficviews_core.csv", "views"),
-(repo_path + "mapd-connector/traffic/views", file_path + "oss_git_trafficviews_connector.csv", "views"),
-(repo_path + "mapd-charting/traffic/views", file_path + "oss_git_trafficviews_charting.csv", "views"),
-#subscribers
-(repo_path + "mapd-core/subscribers", file_path + "oss_git_subscribers_core.csv", "none"),
-(repo_path + "mapd-connector/subscribers", file_path + "oss_git_subscribers_connector.csv", "none"),
-(repo_path + "mapd-charting/subscribers", file_path + "oss_git_subscribers_charting.csv", "none"),
-#stats/contributors (requires push access to repo)
-(repo_path + "mapd-core/stats/contributors", file_path + "oss_git_contributors_core.csv", "author"),
-(repo_path + "mapd-connector/stats/contributors", file_path + "oss_git_contributors_connector.csv", "author"),
-(repo_path + "mapd-charting/stats/contributors", file_path + "oss_git_contributors_charting.csv", "author"),
-#collaborators (requires push access to repo)
-(repo_path + "mapd-core/collaborators", file_path + "oss_git_collaborators_core.csv", "none"),
-(repo_path + "mapd-connector/collaborators", file_path + "oss_git_collaborators_connector.csv", "none"),
-(repo_path + "mapd-charting/collaborators", file_path + "oss_git_collaborators_charting.csv", "none")
-]
+repositories = [("mapd-core"), ("mapd-connector"), ("mapd-charting"), ("pymapd-examples")]
 
-def get_credentials(keyfile):
-    dfkv = pd.read_json(keyfile, typ='series')
-    return dfkv
+def get_stars(r):
+    # setup dataframes for capturing information
+    columns = ['repo', 'star_login', 'star_starred_at', 'star_url', 'star_usertype']
+    df = pd.DataFrame(columns=columns)
+    r_stars = r.get_stargazers_with_dates()
+    i = 0
+    for star in r_stars:
+        df.loc[i] = [r.name, star.user.login, star.starred_at, star.user.html_url, star.user.type]
+        i += 1
+    df.sort_values('star_starred_at')
+    df['star_count_to_date'] = df.index
+
+    if df.empty:
+        print ("no stars")
+    else:
+        print (str(r.stargazers_count) + " stars for " + r.name)
+        return df
+
+def get_views(r):
+    # retrieve views information
+    r_views = r.get_views_traffic()
+    df = pd.DataFrame.from_dict(r_views)
+    # iterate through individual view objects nested in the contents
+    i = 0
+    ts = pd.Series('ts', index=[i])
+    cnt = pd.Series('cnt', index=[i])
+    uni = pd.Series('uni', index=[i])
+    repo = pd.Series('repo', index=[i])
+    for view in df['views']: # this column contains a list of view objects
+        i += 1
+        repo[i] = r.name
+        ts[i] = getattr(view, 'timestamp')
+        ts[i] = ts[i]/1000000000
+        cnt[i] = getattr(view, 'count')
+        uni[i] = getattr(view, 'uniques')
+
+    # setup dataframe by concatenating the series together as columns
+    list_of_series = [repo, ts, cnt, uni]
+    # drop the column names before concatenating
+    repo.drop([0], inplace = True)
+    ts.drop([0], inplace = True)
+    cnt.drop([0], inplace = True)
+    uni.drop([0], inplace = True)
+    df_views = pd.concat(list_of_series, axis=1, ignore_index=True)
+    # rename the columns to useful labels
+    columns = ['repo', 'view_timestamp', 'view_count', 'view_unique']
+    df_views.columns = columns
+
+    if df_views.empty:
+        print ("no views")
+    else:
+        print (str(df_views['view_count'].sum()) + ' views for ' + r.name)
+        return df_views
+
+def get_referrers(r):
+    # setup dataframes for capturing information
+    columns = ['repo', 'repo_referrer', 'repo_referrer_count', 'repo_referrer_unique']
+    df = pd.DataFrame(columns=columns)
+    r_referrers = r.get_top_referrers()
+    i = 0
+    for referrer in r_referrers:
+        df.loc[i] = [r.name, referrer.referrer, referrer.count, referrer.uniques]
+        i += 1
+
+    if df.empty:
+        print ("no referrals")
+    else:
+        print (str(df['repo_referrer'].count()) + ' referrers for ' + r.name)
+        return df
 
 def main():
-    dfcreds = get_credentials(keyfile)
-    for url, fn, fc in endpoints:
-        url_get = url + "?" + "access_token=" + dfcreds['access_token']
-    # check for pagination
-        print ("calling URL " + url)
-        res=requests.get(url_get + pagination)
-        repos=res.json()
-    # create a dataframe
-        df = pd.read_json(url_get)
-#        display_cols(df)
-        if df.empty:
-            print ("No Results")
-        else:
-            if fc != "none":
-                print ("flattening " + fc)
-                df = json_normalize(df[fc])
-        # loop through subsequent github pages of results
-            while 'next' in res.links.keys():
-                res=requests.get(res.links['next']['url'])
-                repos.extend(res.json())
-                dfnext = pd.read_json(url_get)
-                if fc != "none":
-                    print ("flattening " + fc)
-                    df = json_normalize(df[fc])
-                df = df.append(dfnext, ignore_index=True)
-        # write to file
-            print ("writing " + fn)
-#            display_cols(df)
-            df.to_csv(fn, index=False)
+
+    # credentials
+    dfcreds = get_credentials(keyfile) # get the authentication information from the keyfile
+    auth_header = dfcreds['access_token'] # get the token from the authentication information
+
+    # connect to github
+    g = Github(auth_header) # instantiate a github object; authorize with the token
+
+    # setup dataframes
+    df_s_main = pd.DataFrame()
+    df_v_main = pd.DataFrame()
+    df_r_main = pd.DataFrame()
+
+    # loop through the list of repos
+    for repo in repositories:
+        r = g.get_repo(gproject + repo)
+
+        # stars
+        df_stars = get_stars(r)
+        df_s_main = df_s_main.append(df_stars, ignore_index=True)
+
+        # views
+        df_views = get_views(r)
+        df_v_main = df_v_main.append(df_views, ignore_index=True)
+
+        # referrers
+        df_referrers = get_referrers(r)
+        df_r_main = df_r_main.append(df_referrers, ignore_index=True)
+
+    # write stars to file
+    print ("writing stars to file")
+    df_s_main.to_csv(file_path + "oss_git_stars.csv", index=False)
+
+    # write views to file
+    print ("writing views to file")
+    df_v_main.to_csv(file_path + "oss_git_views.csv", index=False)
+
+    # write referrers to file
+    print ("writing referrers to file")
+    df_r_main.to_csv(file_path + "oss_git_referrers.csv", index=False)
+
 
 if __name__ == '__main__':
   main()
