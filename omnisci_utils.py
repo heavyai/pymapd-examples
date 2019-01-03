@@ -19,6 +19,10 @@ def get_credentials(keyfile):
     dfkv = pd.read_json(keyfile, typ='series')
     return dfkv
 
+#def get_credentials_header(keyfile):
+#    dkfv = pd.DataFrame.to_json(keyfile)
+#    return dkfv
+
 def connect_to_mapd(str_user, str_password, str_host, str_dbname):
     try:
         connection = connect(user=str_user, password=str_password, host=str_host, dbname=str_dbname, port=443, protocol='https')

@@ -37,14 +37,14 @@ omnisci_keyfile = file_path + 'omnisci_keys.json'
 
 file_names = [
 #mapd repos
-(file_path + 'techsup_docker_ce-cpu_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
-(file_path + 'techsup_docker_ce-cuda_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
-(file_path + 'techsup_docker_core-os-cpu_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
-(file_path + 'techsup_docker_core-os_cuda.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_ce-cpu_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_ce-cuda_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_core-os-cpu_mapd.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_core-os_cuda.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
 #omnisci repos
-(file_path + 'techsup_docker_ce-cpu_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
-(file_path + 'techsup_docker_ce-cuda_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
-(file_path + 'techsup_docker_core_clients_base_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'last_updated'}, 'none', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'})
+(file_path + 'techsup_docker_ce-cpu_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_ce-cuda_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'}),
+(file_path + 'techsup_docker_core_clients_base_omnisci.csv', {'user': 'username'}, {'status', 'star_count'}, {'pull_count'}, {'get_timestamp', 'last_updated'}, '%Y-%m-%dT%H:%M:%S', {'full_description', 'affiliation', 'permissions'}, {'is_private', 'is_automated', 'can_edit', 'is_migrated', 'has_starred'})
 ]
 
 # FUNCTIONS

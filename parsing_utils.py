@@ -12,12 +12,10 @@ def rename_cols(df, renames):
     if renames != {}:
         df.rename(columns=renames, inplace=True)
 
-def format_date_cols(df, col_list, tf):
+def format_date_cols(df, col_list, tf = None, un = None):
     if col_list != {}:
-        if tf == 'none':
-            for col in col_list: df[col] = pd.to_datetime(df[col])
-        else:
-            for col in col_list: df[col] = pd.to_datetime(df[col], format=tf)
+            for col in col_list:
+                df[col] = pd.to_datetime(df[col], format=tf, unit=un)
 
 def format_int_col(df, col_list):
     if col_list != {}:
