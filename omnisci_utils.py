@@ -57,6 +57,14 @@ def drop_table_mapd(connection, table_name):
     command = "DROP TABLE IF EXISTS %s" % (table_name)
     connection.execute(command)
 
+# Load CSV to dataframe and then copy to table using PyMapD
+def get_table_mapd(connection, table_name):
+    command = "SELECT * FROM %s" % (table_name) 
+    print ("getting table " + table_name + ' with ' + command)
+    df = pd.read_sql_query(command, connection)
+    return df
+    
+
 def disconnect_mapd(connection):
     connection.close()
 

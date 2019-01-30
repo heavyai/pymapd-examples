@@ -8,6 +8,7 @@ Created on Wed Oct  3 08:27:36 2018
 
 import pandas as pd
 from github import Github
+import time
 from omnisci_utils import get_credentials
 
 file_path = "/Users/ericgrant/Downloads/OKR_Dashboards/xfer/"
@@ -50,6 +51,7 @@ def get_views(r):
         repo[i] = r.name
         ts[i] = getattr(view, 'timestamp')
         ts[i] = ts[i]/1000000000
+        ts[i] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts[i]))
         cnt[i] = getattr(view, 'count')
         uni[i] = getattr(view, 'uniques')
 
@@ -63,6 +65,7 @@ def get_views(r):
     df_views = pd.concat(list_of_series, axis=1, ignore_index=True)
     # rename the columns to useful labels
     columns = ['repo', 'view_timestamp', 'view_count', 'view_unique']
+    print (df_views)
     df_views.columns = columns
 
     if df_views.empty:
