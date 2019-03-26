@@ -8,22 +8,13 @@ Created on Fri Mar 01 11:20:28 2019
 
 import requests
 import pandas as pd
+import datetime as dt
 from omnisci_utils import get_credentials
 
 # paths
 file_path = '/Users/ericgrant/Downloads/OKR_Dashboards/xfer/'
 repo_path = 'https://api.connectedcommunity.org/'
 keyfile = file_path + 'higherlogic_keys.json'
-payload_communitykey = 'd06df790-8ca4-4e54-91a0-244af0228ddc' # UID for General community
-
-token_endpoint = repo_path + 'api/v2.0/Authentication/GetLogin'
-data_endpoints = [
-    {repo_path + 'api/v2.0/Communities/GetViewableCommunities', 'get', file_path + 'techsup_hl_communities.csv'},
-    {repo_path + 'api/v2.0/Communities/GetCommunityMembers', 'post', file_path + 'techsup_hl_communitymembers.csv'}, # list of members of specified community
-    {repo_path + 'api/v2.0/Discussions/GetEligibleDiscussions', 'get', file_path + 'techsup_hl_communityupdates.csv'} # list of discussions to which API User can subscribe
-   ]
-
-
 
 def main():
    # credentials
@@ -33,37 +24,27 @@ def main():
    # Viewable Communities
    rViewableCommunities = requests.get(repo_path + 'api/v2.0/Communities/GetViewableCommunities', headers=headers)
    dfViewableCommunities = pd.read_json(rViewableCommunities.content)
-   print ('Viewable Communities')
-   print (dfViewableCommunities.head(5))
 
    # Community Members
-   print ('Processing Community Members')
    payload = {
            "CommunityKey": 'd06df790-8ca4-4e54-91a0-244af0228ddc',
            "StartRecord": 1,
            "EndRecord": 1500
            }
    rCommunityMembers = requests.post(repo_path + 'api/v2.0/Communities/GetCommunityMembers', headers=headers, json=payload)
-#   print ('reading json from requests object')
    dfCommunityMembers = pd.read_json(rCommunityMembers.content)
-#   print (dfCommunityMembers.head(5))
-#   print ('renaming blank column label')
+   # add a timestamp to the data
+   dfCommunityMembers['cmtimestamp'] = dt.datetime.now()
    dfCommunityMembers.index.names = ['rowUID']
-#   print (dfCommunityMembers.head(5))
-#   print (dfCommunityMembers.columns)
-   print ('removing nested dict')
-   dfCommunityMembers.drop('Community', 1, inplace=True)
-   print (dfCommunityMembers.columns)
-   dfCommunityMembers.to_csv(file_path + 'techsup_hl_communitymembers.csv')
+   dfCommunityMembers.drop('Community', 1, inplace=True) #remove the nested dictionary of community information
+   dfCommunityMembers.to_csv(file_path + 'techsup_hl_communitymembers.csv', index=False, date_format="%Y-%m-%d")
 
-   # Eligible Discussions
-   payload = {"CommunityKey": 'd06df790-8ca4-4e54-91a0-244af0228ddc'}
-   rEligibleDiscussions = requests.get(repo_path + 'api/v2.0/Discussions/GetEligibleDiscussions', headers=headers, json=payload)
-   dfEligibleDiscussions = pd.read_json(rEligibleDiscussions.content)
-   print ('Eligible Discussions')
-   print (dfEligibleDiscussions.head(5))
-#   rEligibleDiscussions.to_csv
-
+   # Discussion Posts
+   rDiscussionPosts = requests.get(repo_path + 'api/v2.0/Discussions/GetDiscussionPosts?maxToRetrieve=5000', headers=headers)
+   dfDiscussionPosts = pd.read_json(rDiscussionPosts.content)
+   # add a timestamp to the data
+   dfDiscussionPosts['dptimestamp'] = dt.datetime.now()
+   dfDiscussionPosts.to_csv(file_path + 'techsup_hl_discussionposts.csv', index=False, date_format="%Y-%m-%d")
 
 if __name__ == '__main__':
  main()
