@@ -1,3 +1,8 @@
+> [!IMPORTANT]  
+> As of 05/27/2026 this project has been deprecated. **pymapd-examples** is not maintained anymore.
+> 
+
+
 # pymapd-examples
 examples of using pymapd do get information and put it into omnisci
 
